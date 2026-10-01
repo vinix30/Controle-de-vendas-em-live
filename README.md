@@ -1,13 +1,27 @@
 # Live em cena
 
-Painel estático para controle de cinco salas independentes de live. Permite atribuir apresentadoras a salas, renomear as salas, escolher quem está em cena em cada sala, registrar várias vendas por apresentadora, consultar o histórico filtrado por sala ou pessoa e reorganizar a equipe com as setas. Cadastros, nomes das salas, ordem, atribuições, vendas e estado da sessão são salvos no armazenamento local do navegador.
+Painel para controlar cinco salas de live, apresentadoras e vendas. Esta versão usa Cloudflare Workers e D1 para compartilhar dados entre dispositivos que acessam o mesmo endereço.
 
-## Publicar no Cloudflare Pages
+## Publicar no Worker `controle-de-vendas-em-live`
 
-1. Envie o conteúdo da pasta `site` para um repositório Git, ou faça upload da pasta em um projeto Cloudflare Pages.
-2. Se conectar um repositório, configure o diretório de saída como `.` e deixe o comando de build em branco.
-3. Publique. O arquivo `index.html` é a página inicial.
+1. No Cloudflare, abra **Workers & Pages → D1 SQL Database** e crie um banco chamado `live-em-cena`.
+2. Copie o ID do banco e substitua `COLE_AQUI_O_ID_DO_D1` em `wrangler.jsonc` pelo ID real.
+3. No console SQL do D1, execute o conteúdo de `schema.sql` para criar as tabelas e as cinco salas.
+4. Publique este repositório como Worker com Wrangler (`npx wrangler deploy`) ou configure a integração do repositório no Cloudflare para publicar com Wrangler. O nome definido no arquivo é `controle-de-vendas-em-live`, correspondente ao endereço `controle-de-vendas-em-live.viniciusmarketing.workers.dev`.
+5. Configure Cloudflare Access para exigir login dos integrantes da equipe antes de permitir acesso ao site. Sem essa proteção, pessoas que encontrem o endereço podem consultar ou alterar os dados.
 
-## Observação
+O Worker fornece a API em `/api/state` e os arquivos do site em `public/`. A primeira abertura com o banco vazio envia para o D1 os dados que já estiverem salvos no navegador. Faça essa primeira abertura no dispositivo que contém os dados locais que deseja preservar. Os demais dispositivos passam a carregar os dados compartilhados do D1. Abrir `index.html` diretamente no computador não conecta ao banco remoto.
 
-Este protótipo não controla o software de transmissão nem sincroniza alterações entre dispositivos. Para uma equipe compartilhar o controle ao mesmo tempo, será necessário adicionar um serviço de dados e autenticação.
+## Dados e funcionamento
+
+- As vendas são registradas com valor, apresentadora, sala e data/hora.
+- O histórico pode ser filtrado por sala, apresentadora e dia.
+- Os cartões das salas mostram os valores do dia e o acumulado.
+- As alterações são sincronizadas ao D1; a página atualiza dados compartilhados enquanto permanece aberta.
+- O navegador mantém uma cópia local para uso temporário se a API ficar indisponível. O indicador no cabeçalho mostra o estado da conexão.
+
+## Referências Cloudflare
+
+- [Configuração de Workers e Wrangler](https://developers.cloudflare.com/workers/wrangler/configuration/)
+- [Vincular D1 ao Worker](https://developers.cloudflare.com/d1/get-started/)
+- [Arquivos estáticos em Workers](https://developers.cloudflare.com/workers/static-assets/)
