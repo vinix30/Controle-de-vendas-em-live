@@ -1,4 +1,4 @@
-import { onRequestGet, onRequestPut } from '../functions/api/state.js';
+import { onRequestGet, onRequestPut, onSaleRequest } from '../functions/api/state.js';
 
 export default {
   async fetch(request, env) {
@@ -8,6 +8,8 @@ export default {
       if (request.method === 'PUT') return onRequestPut({ request, env });
       return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, PUT' } });
     }
+    const saleMatch = url.pathname.match(/^\/api\/sales\/([^/]+)$/);
+    if (saleMatch) return onSaleRequest({ request, env, id: decodeURIComponent(saleMatch[1]) });
     if (url.pathname.startsWith('/api/')) {
       return Response.json({ error: 'Endpoint not found.' }, { status: 404 });
     }

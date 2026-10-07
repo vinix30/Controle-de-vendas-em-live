@@ -15,7 +15,8 @@ O Worker fornece a API em `/api/state` e os arquivos do site em `public/`. A pri
 ## Dados e funcionamento
 
 - As vendas são registradas com valor, apresentadora, sala e data/hora.
-- O histórico pode ser filtrado por sala, apresentadora e dia.
+- O histórico pode ser filtrado por sala, apresentadora e período entre data inicial e final.
+- Cada venda pode ter seu valor editado pelo histórico; a alteração atualiza o registro correspondente no D1 e preserva apresentadora, sala e horário.
 - O total geral e o saldo de cada apresentadora mostram apenas as vendas do dia local atual e passam a zero automaticamente quando a data vira.
 - As vendas anteriores permanecem salvas no D1 e podem ser consultadas no histórico por dia, apresentadora ou sala.
 - Os cartões das salas mostram os valores do dia e o acumulado.

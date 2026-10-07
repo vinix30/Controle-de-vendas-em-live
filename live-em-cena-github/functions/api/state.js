@@ -96,3 +96,22 @@ export async function onRequestPut({ request, env }) {
     return json({ error: 'Não foi possível salvar no banco compartilhado.' }, 500);
   }
 }
+
+export async function onSaleRequest({ request, env, id }) {
+  if (!id || id.length > 80) return json({ error: 'Venda inválida.' }, 400);
+  if (request.method === 'PUT') {
+    let body;
+    try { body = await request.json(); }
+    catch { return json({ error: 'Corpo JSON inválido.' }, 400); }
+    const value = Number(body?.value);
+    if (!Number.isFinite(value) || value <= 0 || value > 1000000000) return json({ error: 'Informe um valor de venda válido.' }, 400);
+    try {
+      const result = await env.DB.prepare('UPDATE sales SET value = ? WHERE id = ?').bind(value, id).run();
+      if (!result.meta?.changes) return json({ error: 'Venda não encontrada.' }, 404);
+      return json({ ok: true });
+    } catch (error) {
+      return json({ error: 'Não foi possível atualizar a venda.' }, 500);
+    }
+  }
+  return json({ error: 'Método não permitido.' }, 405);
+}
