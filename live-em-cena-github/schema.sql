@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS presenters (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT '',
+  whatsapp TEXT NOT NULL DEFAULT '',
   room_id TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0
 );

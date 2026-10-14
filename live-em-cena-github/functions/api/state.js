@@ -11,7 +11,7 @@ export async function onRequestGet({ env }) {
   try {
     const [roomRows, presenterRows, saleRows, app] = await Promise.all([
       env.DB.prepare('SELECT id, name FROM rooms').all(),
-      env.DB.prepare('SELECT id, name, role, room_id, sort_order FROM presenters ORDER BY sort_order, name').all(),
+      env.DB.prepare('SELECT id, name, role, whatsapp, room_id, sort_order FROM presenters ORDER BY sort_order, name').all(),
       env.DB.prepare('SELECT id, presenter_id, presenter_name, room_id, value, sold_at, legacy FROM sales ORDER BY sold_at DESC').all(),
       env.DB.prepare('SELECT currents_json, switches FROM app_state WHERE id = 1').first(),
     ]);
@@ -22,7 +22,7 @@ export async function onRequestGet({ env }) {
     const salesTotals = new Map();
     for (const sale of salesLog) salesTotals.set(sale.personId, (salesTotals.get(sale.personId) || 0) + sale.value);
     const people = (presenterRows.results || []).map(p => ({
-      id: p.id, name: p.name, role: p.role, room: p.room_id,
+      id: p.id, name: p.name, role: p.role, whatsapp: p.whatsapp || '', room: p.room_id,
       sales: Number((salesTotals.get(p.id) || 0).toFixed(2)),
     }));
     const roomNames = Object.fromEntries((roomRows.results || []).map(r => [r.id, r.name]));
@@ -61,9 +61,9 @@ export async function onRequestPut({ request, env }) {
     if (!p?.id || !String(p.name || '').trim()) return;
     const id = String(p.id).slice(0, 80), room = roomIds.includes(p.room) ? p.room : roomIds[0];
     validPresenterIds.add(id);
-    statements.push(env.DB.prepare(`INSERT INTO presenters (id, name, role, room_id, sort_order) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET name = excluded.name, role = excluded.role, room_id = excluded.room_id, sort_order = excluded.sort_order`)
-      .bind(id, String(p.name).trim().slice(0, 80), String(p.role || '').slice(0, 120), room, index));
+    statements.push(env.DB.prepare(`INSERT INTO presenters (id, name, role, whatsapp, room_id, sort_order) VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET name = excluded.name, role = excluded.role, whatsapp = excluded.whatsapp, room_id = excluded.room_id, sort_order = excluded.sort_order`)
+      .bind(id, String(p.name).trim().slice(0, 80), String(p.role || '').slice(0, 120), String(p.whatsapp || '').replace(/\D/g, '').slice(0, 15), room, index));
   });
   for (const room of roomIds) {
     const currentId = state.currents[room];
