@@ -1,27 +1,91 @@
-# Live em cena
+# Live em Cena — Controle de vendas
 
-Painel para controlar cinco salas de live, apresentadoras e vendas. Esta versão usa Cloudflare Workers e D1 para compartilhar dados entre dispositivos que acessam o mesmo endereço.
+Aplicação web para acompanhar as vendas de apresentadoras em até cinco salas de live. O projeto usa **Cloudflare Workers** para publicar o site e **Cloudflare D1** para guardar e compartilhar os dados entre dispositivos.
 
-## Publicar no Worker `controle-de-vendas-em-live`
+## O que o sistema faz
 
-1. No Cloudflare, abra **Workers & Pages → D1 SQL Database** e crie um banco chamado `live-em-cena`.
-2. Copie o ID do banco e substitua `COLE_AQUI_O_ID_DO_D1` em `wrangler.jsonc` pelo ID real.
-3. No console SQL do D1, execute o conteúdo de `schema.sql` para criar as tabelas e as cinco salas.
-4. Publique este repositório como Worker com Wrangler (`npx wrangler deploy`) ou configure a integração do repositório no Cloudflare para publicar com Wrangler. O nome definido no arquivo é `controle-de-vendas-em-live`, correspondente ao endereço `controle-de-vendas-em-live.viniciusmarketing.workers.dev`.
-5. Configure Cloudflare Access para exigir login dos integrantes da equipe antes de permitir acesso ao site. Sem essa proteção, pessoas que encontrem o endereço podem consultar ou alterar os dados.
+- Gerencia cinco salas e permite editar os nomes delas.
+- Cadastra, edita, organiza e atribui apresentadoras às salas.
+- Permite escolher quem está ao vivo em cada sala e trocar a ordem das apresentadoras.
+- Registra vendas informando apenas o valor; o sistema guarda apresentadora, sala e horário automaticamente.
+- Mostra os saldos do dia e os acumulados das salas.
+- Mantém o histórico de vendas e permite filtrar por apresentadora, sala e intervalo de datas.
+- Permite editar o valor de uma venda existente sem alterar a apresentadora, a sala ou o horário original.
+- Exibe resultados por apresentadora em tabela e gráfico, com filtro de período.
+- Permite cadastrar o WhatsApp de cada apresentadora e preparar uma mensagem individual com os resultados do período. Também prepara um resumo geral para escolher o contato ou grupo no WhatsApp.
+- Abre as mensagens preenchidas no WhatsApp para revisão. O envio é manual: é preciso conferir e tocar em **Enviar**.
+- Oferece a interface em português, inglês e chinês simplificado.
+- Sincroniza as alterações com o D1. Se a API estiver indisponível, o navegador mantém uma cópia local temporária.
 
-O Worker fornece a API em `/api/state` e os arquivos do site em `public/`. A primeira abertura com o banco vazio envia para o D1 os dados que já estiverem salvos no navegador. Faça essa primeira abertura no dispositivo que contém os dados locais que deseja preservar. Os demais dispositivos passam a carregar os dados compartilhados do D1. Abrir `index.html` diretamente no computador não conecta ao banco remoto.
+Os saldos diários usam a data local do navegador e voltam a zero quando começa um novo dia. As vendas anteriores continuam no banco e podem ser consultadas no histórico.
 
-## Dados e funcionamento
+## Estrutura do projeto
 
-- As vendas são registradas com valor, apresentadora, sala e data/hora.
-- O histórico pode ser filtrado por sala, apresentadora e dia.
-- Os cartões das salas mostram os valores do dia e o acumulado.
-- As alterações são sincronizadas ao D1; a página atualiza dados compartilhados enquanto permanece aberta.
-- O navegador mantém uma cópia local para uso temporário se a API ficar indisponível. O indicador no cabeçalho mostra o estado da conexão.
+- `public/`: arquivos do site publicados pelo Worker.
+- `src/worker.js`: Worker que encaminha a API e serve os arquivos estáticos.
+- `functions/api/state.js`: leitura e gravação do estado no D1.
+- `schema.sql`: estrutura inicial das tabelas do banco.
+- `whatsapp-migration.sql`: migração para adicionar o número de WhatsApp a um D1 já existente.
+- `wrangler.jsonc`: configuração do Worker, dos arquivos estáticos e do vínculo com D1.
 
-## Referências Cloudflare
+## Publicação no Cloudflare
 
-- [Configuração de Workers e Wrangler](https://developers.cloudflare.com/workers/wrangler/configuration/)
-- [Vincular D1 ao Worker](https://developers.cloudflare.com/d1/get-started/)
-- [Arquivos estáticos em Workers](https://developers.cloudflare.com/workers/static-assets/)
+### Antes de começar
+
+É necessário ter Node.js instalado, acesso à conta Cloudflare e Wrangler autenticado. No Windows PowerShell, use `npx.cmd` nos comandos abaixo se a execução de scripts `.ps1` estiver bloqueada.
+
+### Configuração do D1
+
+O arquivo `wrangler.jsonc` já aponta para o banco `live-em-cena` e contém o ID configurado para este projeto. Confirme no painel Cloudflare que esse é o banco correto antes de publicar.
+
+- **Primeira configuração de um banco vazio:** abra o D1 no painel Cloudflare, acesse o console SQL e execute o conteúdo de `schema.sql` uma única vez.
+- **Banco existente, já usado pelo site:** execute o conteúdo de `whatsapp-migration.sql` uma única vez antes do deploy desta versão. Essa migração adiciona a coluna de WhatsApp e preserva as vendas existentes.
+
+Não execute `schema.sql` sobre um banco já usado como substituto da migração. Não repita o `ALTER TABLE` depois que a coluna já tiver sido criada; o D1 retornará erro de coluna duplicada.
+
+### Deploy pelo PowerShell
+
+1. Abra o PowerShell na pasta deste projeto, onde está o arquivo `wrangler.jsonc`.
+2. Se ainda não conectou esta instalação do Wrangler à sua conta, execute:
+
+   ```powershell
+   npx.cmd wrangler login
+   ```
+
+3. Depois de concluir a configuração do D1 acima, publique:
+
+   ```powershell
+   npx.cmd wrangler deploy
+   ```
+
+4. Aguarde a confirmação de publicação e abra o endereço do Worker para conferir o site.
+
+O nome configurado é `controle-de-vendas-em-live`. O endereço público depende do domínio Workers da conta Cloudflare.
+
+### Atualização do site
+
+Depois de alterar o projeto, publique a nova versão com `npx.cmd wrangler deploy`, ou faça commit e push se o repositório estiver integrado a um pipeline de deploy automático no Cloudflare. O D1 continua sendo o mesmo; não recrie o banco nas atualizações comuns.
+
+## Preservar e compartilhar dados
+
+A primeira abertura do site conectado tenta sincronizar dados locais com o D1 quando o banco ainda está vazio. Faça essa primeira abertura no navegador que contém os dados locais que deseja preservar. Depois, os dispositivos que acessarem o mesmo Worker usarão os dados compartilhados do banco.
+
+Abrir o arquivo `public/index.html` diretamente no computador serve apenas para uma prévia local; essa abertura não se conecta à API do Worker nem ao banco D1.
+
+## Acesso e segurança
+
+Os dados da API podem ser consultados e alterados por quem conseguir acessar o endereço, a menos que o acesso esteja protegido. Configure uma política do **Cloudflare Access** para exigir autenticação dos integrantes da equipe antes de compartilhar o endereço. Não coloque tokens ou credenciais da conta no repositório.
+
+## Tecnologias
+
+- HTML, CSS e JavaScript no site.
+- Cloudflare Workers para servir a aplicação e sua API.
+- Cloudflare D1 (SQLite) para persistência.
+- Wrangler para desenvolvimento e publicação.
+
+## Documentação oficial
+
+- [Workers e configuração do Wrangler](https://developers.cloudflare.com/workers/wrangler/configuration/)
+- [Cloudflare D1](https://developers.cloudflare.com/d1/)
+- [Assets estáticos em Workers](https://developers.cloudflare.com/workers/static-assets/)
+- [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/)
