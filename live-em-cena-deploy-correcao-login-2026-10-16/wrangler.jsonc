@@ -1,0 +1,21 @@
+{
+  "name": "controle-de-vendas-em-live",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "live-em-cena",
+      "database_id": "e294cc45-3b72-427d-95d5-18d173af5c1e"
+    }
+  ]
+}
